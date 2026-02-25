@@ -1,0 +1,182 @@
+// Load environment variables from .env file
+require('dotenv').config();
+
+// Import mongoose
+const mongoose = require('mongoose');
+
+// Connect to MongoDB Atlas using URI from .env
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+});
+
+// Check connection status
+mongoose.connection.once('open', () => {
+  console.log('Connected to MongoDB');
+});
+
+// =========================
+// Person Schema & Model
+// =========================
+
+// Define the schema for Person
+const personSchema = new mongoose.Schema({
+  name: { type: String, required: true },  // Name is required
+  age: Number,                             // Age is optional
+  favoriteFoods: [String]                  // Array of strings
+});
+
+// Create the Person model
+const Person = mongoose.model('Person', personSchema);
+
+// =========================
+// Create and Save One Person
+// =========================
+
+// Create a new person instance
+const person = new Person({
+  name: 'John',
+  age: 25,
+  favoriteFoods: ['pizza', 'burritos']
+});
+
+// Save the person to the database
+person.save(function (err, data) {
+  if (err) return console.error(err);
+  console.log('Saved person:', data);
+});
+
+// =========================
+// Create Many People
+// =========================
+
+const arrayOfPeople = [
+  { name: 'Mary', age: 30, favoriteFoods: ['salad'] },
+  { name: 'Alex', age: 22, favoriteFoods: ['burritos'] },
+  { name: 'Sara', age: 19, favoriteFoods: ['pasta'] }
+];
+
+// Create multiple people in DB
+Person.create(arrayOfPeople, function (err, data) {
+  if (err) return console.error(err);
+  console.log('People created:', data);
+});
+
+// =========================
+// Find People by Name
+// =========================
+
+function findPeopleByName(name) {
+  Person.find({ name: name }, function (err, data) {
+    if (err) return console.error(err);
+    console.log('Found by name:', data);
+  });
+}
+
+// =========================
+// Find One Person by Favorite Food
+// =========================
+
+function findOneByFood(food) {
+  Person.findOne({ favoriteFoods: food }, function (err, data) {
+    if (err) return console.error(err);
+    console.log('Found by food:', data);
+  });
+}
+
+// =========================
+// Find Person by ID
+// =========================
+
+function findPersonById(personId) {
+  Person.findById(personId, function (err, data) {
+    if (err) return console.error(err);
+    console.log('Found by ID:', data);
+  });
+}
+
+// =========================
+// Classic Update (Find → Edit → Save)
+// =========================
+
+function addHamburger(personId) {
+  Person.findById(personId, function (err, person) {
+    if (err) return console.error(err);
+
+    // Add hamburger to favoriteFoods
+    person.favoriteFoods.push('hamburger');
+
+    // Save updated document
+    person.save(function (err, updatedPerson) {
+      if (err) return console.error(err);
+      console.log('Updated person:', updatedPerson);
+    });
+  });
+}
+
+// =========================
+// Update Using findOneAndUpdate()
+// =========================
+
+function updateAgeByName(personName) {
+  Person.findOneAndUpdate(
+    { name: personName },
+    { age: 20 },
+    { new: true },   // Return updated document
+    function (err, updatedDoc) {
+      if (err) return console.error(err);
+      console.log('Age updated:', updatedDoc);
+    }
+  );
+}
+
+// =========================
+// Delete One Person by ID
+// =========================
+
+function removeById(personId) {
+  Person.findByIdAndRemove(personId, function (err, data) {
+    if (err) return console.error(err);
+    console.log('Deleted person:', data);
+  });
+}
+
+// =========================
+// Delete Many People Named "Mary"
+// =========================
+
+function removeManyPeople() {
+  Person.remove({ name: 'Mary' }, function (err, result) {
+    if (err) return console.error(err);
+    console.log('Deleted Mary records:', result);
+  });
+}
+
+// =========================
+// Chain Query Helpers
+// =========================
+
+function queryChain(done) {
+  Person.find({ favoriteFoods: 'burritos' })
+    .sort({ name: 1 })     // Sort by name ascending
+    .limit(2)             // Limit results to 2
+    .select('-age')       // Hide age field
+    .exec(function (err, data) {
+      done(err, data);
+    });
+}
+
+// =========================
+// Example Calls (Optional)
+// =========================
+
+// findPeopleByName('Mary');
+// findOneByFood('burritos');
+// updateAgeByName('Alex');
+// removeManyPeople();
+
+// Example of chained query usage
+// queryChain(function (err, data) {
+//   if (err) return console.error(err);
+//   console.log('Query chain result:', data);
+// });
